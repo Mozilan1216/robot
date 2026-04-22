@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.8)
 project(open3d_loc)
 
-# Default to C++14
+# --- 策略优化：放在最前面以消除警告 ---
+cmake_policy(SET CMP0074 NEW) # 消除 PCL_ROOT 警告
+cmake_policy(SET CMP0072 NEW) # 消除 Open3D 内部查找 OpenGL 的策略警告
+
+# Default to C++17
 if(NOT CMAKE_CXX_STANDARD)
-        set(CMAKE_CXX_STANDARD 14)
+        set(CMAKE_CXX_STANDARD 17)
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -39,9 +43,9 @@ find_package(OpenCV REQUIRED)
 find_package(Boost REQUIRED COMPONENTS filesystem system)
 
 # Set Open3D path - modify this to your installation path
-set(Open3D_DIR "/home/sax/open3d141/lib/cmake/Open3D")
+set(Open3D_DIR "/home/ubuntu/ros2_ws/open3d141/lib/cmake/Open3D")
 
-# set(Open3D_DIR "/home/unitree/open3d141_arm/open3d141/lib/cmake/Open3D")
+# set(Open3D_DIR "/home/ubuntu/ros2_ws/open3d141/lib/cmake/Open3D")
 find_package(Open3D REQUIRED)
 
 # Fix Open3D libraries - remove problematic .so files
