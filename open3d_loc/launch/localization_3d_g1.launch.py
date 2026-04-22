@@ -20,7 +20,9 @@ def generate_launch_description():
                 'launch',
                 'mapping.launch.py'
             ])
-        ])
+        ]),
+        # 强行关掉 FAST-LIO2 自带的 RViz
+        launch_arguments={'rviz': 'false'}.items()
     )
 
     # 包含 open3d_loc 的 launch 文件
