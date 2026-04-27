@@ -24,7 +24,7 @@ def generate_launch_description():
     ])
 
     # 地图文件路径 - 使用绝对路径指向源码目录中的地图文件
-    map_file = '/home/nvidia/luckrobot/mid360s_ws/map/test.pcd'
+    map_file = '/home/ubuntu/ros2_ws/src/map/map_20260426_1109.pcd'
 
     # 静态TF发布节点 - camera_init to odom
     static_tf_camera_init2odom = Node(
@@ -36,12 +36,12 @@ def generate_launch_description():
 
     # 静态TF发布节点 - imu_link to base_link
     # 修正：父frame是imu_link，子frame是base_link
-    # static_tf_imulink2baselink = Node(
-    #     package='tf2_ros',
-    #     executable='static_transform_publisher',
-    #     name='imulink2baselink',
-    #     arguments=['0', '0', '0', '0', '0', '0', '1', 'imu_link', 'base_link']
-    # )
+    static_tf_imulink2baselink = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='imulink2baselink',
+        arguments=['0', '0', '0', '0', '0', '0', '1', 'imu_link', 'base_link']
+    )
 
     # 静态TF发布节点 - base_link to motion_link
     # 修正：base_link是父frame，motion_link是子frame
@@ -137,7 +137,7 @@ def generate_launch_description():
     return LaunchDescription([
         use_sim_time_arg,
         static_tf_camera_init2odom,
-        # static_tf_imulink2baselink,
+        static_tf_imulink2baselink,
         static_tf_base_center,
         global_localization_node,
         # pointcloud_transformer_node

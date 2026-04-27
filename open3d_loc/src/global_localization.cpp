@@ -278,9 +278,9 @@ GloabalLocalization::GloabalLocalization() : Node("global_loc_node"),
     loc_fitness_ = 0.0;
     // 注册回调函数
     sub_baselink2odom_ = this->create_subscription<nav_msgs::msg::Odometry>(
-        "/Odometry_loc", 50, std::bind(&GloabalLocalization::CallbackBaselink2Odom, this, std::placeholders::_1));
+        "/Odometry", 50, std::bind(&GloabalLocalization::CallbackBaselink2Odom, this, std::placeholders::_1));
     sub_scan_cur_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-        "/cloud_registered_1", 50, std::bind(&GloabalLocalization::CallbackScan, this, std::placeholders::_1));
+        "/cloud_registered", 50, std::bind(&GloabalLocalization::CallbackScan, this, std::placeholders::_1));
     sub_initialpose_ = this->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(
         "/initialpose", 50, std::bind(&GloabalLocalization::CallbackInitialPose, this, std::placeholders::_1));
 
@@ -694,18 +694,47 @@ void GloabalLocalization::LocalizationInitialize()
 
             *target = *map_fine_crop;
             open3d::utility::LogInfo("before sample, target size: {}, has normal: {}", target->points_.size(), target->HasNormals() ? "true" : "false");
+            ///// 如果目标点云过大，随机下采样到指定数量，保持分布一致性
+            if (target->IsEmpty())
+            {
+                lock_mat_odom2map_.unlock();
+                RCLCPP_WARN(this->get_logger(), "target is empty, skip this localization");
+                continue;
+            }
+            /////
             if (target->points_.size() > static_cast<size_t>(maxpoints_target_))
             {
                 target = target->RandomDownSample(double(maxpoints_target_) / target->points_.size());
             }
+            ///// 如果目标点云没有法线，估计法线并统一朝向
+            if (!target->HasNormals())
+            {
+                target->EstimateNormals(open3d::geometry::KDTreeSearchParamHybrid(voxelsize_fine_ * 2, 30));
+                target->OrientNormalsToAlignWithDirection();
+            }
+            /////
             open3d::utility::LogInfo("after sample, target size: {}, has normal: {}", target->points_.size(), target->HasNormals() ? "true" : "false");
 
             source = pcd_scan->Crop(*OBB_scan);
             open3d::utility::LogInfo("source size: {}, has normal: {}", source->points_.size(), source->HasNormals() ? "true" : "false");
+            if (source->IsEmpty())
+            {
+                lock_mat_odom2map_.unlock();
+                RCLCPP_WARN(this->get_logger(), "source is empty, skip this localization");
+                continue;
+            }
+            
             if (source->points_.size() > static_cast<size_t>(maxpoints_source_))
             {
                 source = source->RandomDownSample(double(maxpoints_source_) / source->points_.size());
             }
+            ////
+            if (!source->HasNormals())
+            {
+                source->EstimateNormals(open3d::geometry::KDTreeSearchParamHybrid(voxelsize_fine_ * 2, 30));
+                source->OrientNormalsToAlignWithDirection();
+            }
+            //////
             open3d::utility::LogInfo("source size: {}, has normal: {}", source->points_.size(), source->HasNormals() ? "true" : "false");
 
             source->Transform(reg_matrix);
@@ -933,6 +962,14 @@ void GloabalLocalization::Localization()
             {
                 target = target->RandomDownSample(double(maxpoints_target_) / target->points_.size());
             }
+            /////////
+            if (!target->HasNormals())
+            {
+                target->EstimateNormals(open3d::geometry::KDTreeSearchParamHybrid(voxelsize_fine_ * 2, 30));
+                target->OrientNormalsToAlignWithDirection();
+            }
+
+            /////////
             open3d::utility::LogInfo("after sample, target size: {}, has normal: {}", target->points_.size(), target->HasNormals() ? "true" : "false");
 
             source = pcd_scan->Crop(*OBB_scan);
@@ -943,6 +980,14 @@ void GloabalLocalization::Localization()
             {
                 source = source->RandomDownSample(double(maxpoints_source_) / source->points_.size());
             }
+            ////////
+            if (!source->HasNormals())
+            {
+                source->EstimateNormals(open3d::geometry::KDTreeSearchParamHybrid(voxelsize_fine_ * 2, 30));
+                source->OrientNormalsToAlignWithDirection();
+            }
+            ////////
+
             open3d::utility::LogInfo("after prerpocess: {}", source->points_.size());
 
             auto reg_result2 = pcd_tools::RegistrationIcp(source, target, voxelsize_fine_ * 2, reg_matrix, 1);
